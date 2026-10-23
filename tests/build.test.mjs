@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { build } from '../scripts/build.mjs';
+
+test('deployment output contains current version and rebuild time, while excluding private files and environment values', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ui-lab-build-test-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const source = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  await fs.cp(path.join(source, 'dist'), path.join(root, 'dist'), { recursive: true });
+  await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({ version: '1.1.1' }));
+  await fs.writeFile(path.join(root, 'dist', '.env.local'), 'sensitive-local-test-file');
+  await fs.writeFile(path.join(root, 'dist', 'credentials.json'), 'sensitive-auth-test-file');
+  await fs.writeFile(path.join(root, 'dist', 'unexpected.js'), 'not-a-public-asset');
+  const env = { VERCEL_GIT_COMMIT_SHA: 'a'.repeat(40), OPENAI_API_KEY: 'sensitive-build-test-value' };
+  const first = await build({ root, env, now: new Date('2026-10-23T03:00:00.000Z') });
+  const html = await fs.readFile(path.join(root, 'build', 'index.html'), 'utf8');
+  assert.equal((html.match(/ver 1\.1\.1 · aaaaaaa/g) || []).length, 2);
+  assert(html.includes('2026.10.23 12:00:00 KST'));
+  assert(!html.includes('ver 개발중'));
+  assert(!html.includes(env.OPENAI_API_KEY));
+  assert.deepEqual((await fs.readdir(path.join(root, 'build'))).sort(), ['app.js', 'chat.css', 'chat.js', 'index.html', 'release.css', 'snapshot.js', 'style.css', 'version.json']);
+  const second = await build({ root, env, now: new Date('2026-10-23T03:00:01.000Z') });
+  assert.equal(second.commit, first.commit); assert.notEqual(second.builtAt, first.builtAt);
+  assert.deepEqual(JSON.parse(await fs.readFile(path.join(root, 'build', 'version.json'), 'utf8')), second);
+  await assert.rejects(build({ root, env: { VERCEL_GIT_COMMIT_SHA: '<script>bad</script>' } }), /Invalid Git/);
+});

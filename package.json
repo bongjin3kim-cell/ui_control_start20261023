@@ -1,0 +1,20 @@
+{
+  "name": "mcp-ui-lab",
+  "version": "1.1.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node --env-file-if-exists=.env.local server/dev.mjs --chatgpt",
+    "dev:api": "node --env-file-if-exists=.env.local server/dev.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check:security": "node scripts/check-security.mjs",
+    "check": "node --check dist/app.js && node --check dist/chat.js && node --check dist/snapshot.js && npm test && npm run check:security"
+  },
+  "dependencies": {
+    "jose": "6.2.13"
+  }
+}

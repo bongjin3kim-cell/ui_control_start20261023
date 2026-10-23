@@ -16,3 +16,27 @@ playwright-report/
 test-results/
 
 # dist/ contains the maintained application source and must stay tracked.
+
+# Credentials, OAuth state, and platform secrets are never source files.
+.vercel/
+.private/
+private/
+secrets/
+**/.private/
+**/.env
+**/.env.*
+!/.env.example
+**/credentials*.json
+**/auth.json
+**/tokens.json
+**/chatgpt-host.json
+**/chatgpt-session*.json
+**/host.enc
+**/accounts.enc
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+coverage/
+build/
